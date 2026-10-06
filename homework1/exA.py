@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 # Import const.py from the utils package
 from utils.const import *
 
-
+#---------------------------------------------------------------------------------------
+#A.I.
+#---------------------------------------------------------------------------------------
 #1. data acquisition
 df = pd.read_excel(INPUT_FILE_PATH, sheet_name="Sheet5")
 start_index = (GROUP_NUMBER -1)*20+2
@@ -136,3 +138,21 @@ Y_pred = X_with_bias @ theta
 
 #TODO:plotting
 
+#---------------------------------------------------------------------------------------
+#A.II.
+#---------------------------------------------------------------------------------------
+
+#polynomial regression
+
+def regression_model(x,theta):
+    """
+    Calculate the predictions of the regression model.
+    param x: Input features (numpy array)
+    param theta: Model parameters (numpy array)
+    return: Predictions (numpy array)
+    """
+    # Construct X = [1, x, x^2] inside the function
+    x = x.reshape(-1, 1)  # Ensure X is a column vector
+    X = np.hstack([np.ones_like(x), x, x**2])
+    
+    return X @ theta
