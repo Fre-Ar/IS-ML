@@ -16,8 +16,6 @@ print(data)
 
 #2. data transformation
 #visualization of the data
-plt.scatter(data['X'], data['Y'])
-plt.title("Data Visualization")
-plt.xlabel("X")
-plt.ylabel("Y")
+data.plot(x='X', y='Y', kind='scatter')
 plt.show()
+
