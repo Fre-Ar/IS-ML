@@ -1,0 +1,2 @@
+GROUP_NUMBER = 4
+SEED = 42
