@@ -151,8 +151,7 @@ def regression_model(x,theta):
     param theta: Model parameters (numpy array)
     return: Predictions (numpy array)
     """
-    # Construct X = [1, x, x^2] inside the function
-    x = x.reshape(-1, 1)  # Ensure X is a column vector
+    x = x.reshape(-1, 1)
     X = np.hstack([np.ones_like(x), x, x**2])
     
     return X @ theta
