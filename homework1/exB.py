@@ -128,6 +128,18 @@ x2_train, x2_test, y2_train, y2_test = split_dataset(x2,y2,train_test_split)
 #---------------------------------------------------------------------------------------
 #4. Train on Dataset 1 and Dataset 2
 
+def accuracy(y_true:np.ndarray, y_pred:np.ndarray):
+    """
+    Calculates the accuracy of the predictions.
+    params:
+        y_true: true labels (numpy array)
+        y_pred: predicted labels (numpy array)
+    return:
+        accuracy (float)
+    """
+    return np.mean(y_true == y_pred)
+
+
 n_neighbors = 3
 c = 1.0
 
@@ -145,3 +157,19 @@ svm1 = svm.SVC(kernel='linear', C=c)
 svm1.fit(x1_train, y1_train)
 svm2 = svm.SVC(kernel='linear', C=c)
 svm2.fit(x2_train, y2_train)
+
+answers1 = {
+    "GaussianNB": accuracy(y1_test, gnb1.predict(x1_test)),
+    "KNN": accuracy(y1_test, knn1.predict(x1_test)),
+    "SVM": accuracy(y1_test, svm1.predict(x1_test))
+}
+answers2 = {
+    "GaussianNB": accuracy(y2_test, gnb2.predict(x2_test)),
+    "KNN": accuracy(y2_test, knn2.predict(x2_test)),
+    "SVM": accuracy(y2_test, svm2.predict(x2_test))
+}
+
+for model, acc in answers1.items():
+    print(f"Dataset 1 - {model} Accuracy: {acc:.4f}")
+for model, acc in answers2.items():
+    print(f"Dataset 2 - {model} Accuracy: {acc:.4f}")   
