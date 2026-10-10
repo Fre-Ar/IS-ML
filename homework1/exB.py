@@ -6,7 +6,13 @@ import matplotlib.pyplot as plt
 from utils.const import *
 from sklearn import make_classification
 
+
+
+#---------------------------------------------------------------------------------------
+#B.I.
+#---------------------------------------------------------------------------------------
 #Generating range of values for the features
+#1. Dataset 1 creation.
 RANGE= (0.0,1.0)
 
 
@@ -47,8 +53,11 @@ def generate_dataset1(cov:np.ndarray):
    X, y = X[idx], y[idx]
    return X, y
 
+x1,y1 = generate_dataset1(cov1)
+#---------------------------------------------------------------------------------------
+#Dataset 2 creation (Dataset 1 + outliers)
 cov2 = np.array([[16, 0.0], [0.0, 16]])
-
+min_dist = 0.5
 def generate_dataset2(cov:np.ndarray,x:np.ndarray,y:np.ndarray,min_dist:float):
     """
     Genarates outliers and adds them to the original dataset.
@@ -85,4 +94,33 @@ def generate_dataset2(cov:np.ndarray,x:np.ndarray,y:np.ndarray,min_dist:float):
     y_new = np.hstack([y, y_out])
 
     return X_new, y_new
+
+x2,y2 = generate_dataset2(cov2,x1,y1,0.5)
+#---------------------------------------------------------------------------------------
+#3.Split Dataset 1 and Dataset 2
+
+train_test_split=0.8
+def split_dataset(x:np.ndarray,y:np.ndarray,train_test_split:float):
+    """
+    Splits the dataset into training and testing sets.
+    params:
+        x: features (numpy array)
+        y: labels (numpy array)
+        train_test_split: proportion of the dataset to include in the train split
+    return:
+        x_train, x_test, y_train, y_test (numpy arrays)
+    """
+    rng = np.random.default_rng(SEED)
+    samples = x.shape[0]
+    indices = rng.permutation(samples)
+    train_size = int(samples * train_test_split)
     
+    train_indices = indices[:train_size]
+    test_indices = indices[train_size:]
+    
+    return x[train_indices], x[test_indices], y[train_indices], y[test_indices]
+
+x1_train, x1_test, y1_train, y1_test = split_dataset(x1,y1,train_test_split)
+x2_train, x2_test, y2_train, y2_test = split_dataset(x2,y2,train_test_split)
+
+#---------------------------------------------------------------------------------------
