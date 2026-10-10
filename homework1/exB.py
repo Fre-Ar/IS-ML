@@ -139,9 +139,10 @@ def accuracy(y_true:np.ndarray, y_pred:np.ndarray):
     """
     return np.mean(y_true == y_pred)
 
-
+#hyperparameters
 n_neighbors = 3
 c = 1.0
+kernels = ['linear', 'poly', 'rbf', 'sigmoid']
 
 gnb1 = GaussianNB()
 gnb1.fit(x1_train, y1_train)
@@ -153,21 +154,34 @@ knn1.fit(x1_train, y1_train)
 knn2 = KNeighborsClassifier(n_neighbors=n_neighbors)
 knn2.fit(x2_train, y2_train)
 
-svm1 = svm.SVC(kernel='linear', C=c)
-svm1.fit(x1_train, y1_train)
-svm2 = svm.SVC(kernel='linear', C=c)
-svm2.fit(x2_train, y2_train)
+svmresults1 = {}
+svmresults2 = {}
+for kernel in kernels:
+    svm1 = svm.SVC(kernel=kernel, C=c)
+    svm1.fit(x1_train, y1_train)
+    svm2 = svm.SVC(kernel=kernel, C=c)
+    svm2.fit(x2_train, y2_train)
+    svmresults1[kernel] = svm1
+    svmresults2[kernel] = svm2
+
 
 answers1 = {
     "GaussianNB": accuracy(y1_test, gnb1.predict(x1_test)),
     "KNN": accuracy(y1_test, knn1.predict(x1_test)),
-    "SVM": accuracy(y1_test, svm1.predict(x1_test))
+    "SVM_linear": accuracy(y1_test, svmresults1['linear'].predict(x1_test)),
+    "SVM_poly": accuracy(y1_test, svmresults1['poly'].predict(x1_test)),
+    "SVM_rbf": accuracy(y1_test, svmresults1['rbf'].predict(x1_test)),
+    "SVM_sigmoid": accuracy(y1_test, svmresults1['sigmoid'].predict(x1_test))
 }
 answers2 = {
     "GaussianNB": accuracy(y2_test, gnb2.predict(x2_test)),
     "KNN": accuracy(y2_test, knn2.predict(x2_test)),
-    "SVM": accuracy(y2_test, svm2.predict(x2_test))
+    "SVM_linear": accuracy(y2_test, svmresults2['linear'].predict(x2_test)),
+    "SVM_poly": accuracy(y2_test, svmresults2['poly'].predict(x2_test)),
+    "SVM_rbf": accuracy(y2_test, svmresults2['rbf'].predict(x2_test)),
+    "SVM_sigmoid": accuracy(y2_test, svmresults2['sigmoid'].predict(x2_test))
 }
+
 
 for model, acc in answers1.items():
     print(f"Dataset 1 - {model} Accuracy: {acc:.4f}")
