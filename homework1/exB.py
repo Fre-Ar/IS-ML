@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 # Import const.py from the utils package
 from utils.const import *
-from sklearn import make_classification
-
-
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn import svm
 
 #---------------------------------------------------------------------------------------
 #B.I.
@@ -16,7 +16,8 @@ from sklearn import make_classification
 RANGE= (0.0,1.0)
 
 
-cov1 = np.array([[1.5, 0.3], [0.3, 1.5]])
+
+cov1 = np.array([[0.015, 0.003], [0.003, 0.015]])
 
 def generate_dataset1(cov:np.ndarray):
    """
@@ -38,8 +39,8 @@ def generate_dataset1(cov:np.ndarray):
    samples = 80
    samples_per_class = samples // 2
    
-   mean_class_0 = np.ndarray([0.3, 0.3])
-   mean_class_1 = np.ndarray([0.6, 0.6])
+   mean_class_0 = np.array([0.3, 0.3], dtype=float)
+   mean_class_1 = np.array([0.6, 0.6], dtype=float)
    
    X0=rng.multivariate_normal(mean_class_0, cov, samples_per_class)
    X1=rng.multivariate_normal(mean_class_1, cov, samples_per_class)
@@ -56,8 +57,8 @@ def generate_dataset1(cov:np.ndarray):
 x1,y1 = generate_dataset1(cov1)
 #---------------------------------------------------------------------------------------
 #Dataset 2 creation (Dataset 1 + outliers)
-cov2 = np.array([[16, 0.0], [0.0, 16]])
-min_dist = 0.5
+cov2 = np.array([[0.16, 0.0], [0.0, 0.16]])
+min_dist = 0.3
 def generate_dataset2(cov:np.ndarray,x:np.ndarray,y:np.ndarray,min_dist:float):
     """
     Genarates outliers and adds them to the original dataset.
@@ -88,6 +89,7 @@ def generate_dataset2(cov:np.ndarray,x:np.ndarray,y:np.ndarray,min_dist:float):
         y_out_list.append(np.full(samples_per_class, label))
 
     X_out = np.vstack(X_out_list)
+    X_out = np.clip(X_out, RANGE[0], RANGE[1])
     y_out = np.hstack(y_out_list)
 
     X_new = np.vstack([x, X_out])
@@ -95,7 +97,7 @@ def generate_dataset2(cov:np.ndarray,x:np.ndarray,y:np.ndarray,min_dist:float):
 
     return X_new, y_new
 
-x2,y2 = generate_dataset2(cov2,x1,y1,0.5)
+x2,y2 = generate_dataset2(cov2,x1,y1,min_dist)
 #---------------------------------------------------------------------------------------
 #3.Split Dataset 1 and Dataset 2
 
@@ -124,3 +126,22 @@ x1_train, x1_test, y1_train, y1_test = split_dataset(x1,y1,train_test_split)
 x2_train, x2_test, y2_train, y2_test = split_dataset(x2,y2,train_test_split)
 
 #---------------------------------------------------------------------------------------
+#4. Train on Dataset 1 and Dataset 2
+
+n_neighbors = 3
+c = 1.0
+
+gnb1 = GaussianNB()
+gnb1.fit(x1_train, y1_train)
+gnb2 = GaussianNB()
+gnb2.fit(x2_train, y2_train)
+
+knn1 = KNeighborsClassifier(n_neighbors=n_neighbors)
+knn1.fit(x1_train, y1_train)
+knn2 = KNeighborsClassifier(n_neighbors=n_neighbors)
+knn2.fit(x2_train, y2_train)
+
+svm1 = svm.SVC(kernel='linear', C=c)
+svm1.fit(x1_train, y1_train)
+svm2 = svm.SVC(kernel='linear', C=c)
+svm2.fit(x2_train, y2_train)
