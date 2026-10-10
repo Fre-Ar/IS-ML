@@ -126,7 +126,7 @@ x1_train, x1_test, y1_train, y1_test = split_dataset(x1,y1,train_test_split)
 x2_train, x2_test, y2_train, y2_test = split_dataset(x2,y2,train_test_split)
 
 #---------------------------------------------------------------------------------------
-#4. Train on Dataset 1 and Dataset 2
+#4. Train on Dataset 1 and Dataset 2 + 5. exploring parameters for SVM
 
 def accuracy(y_true:np.ndarray, y_pred:np.ndarray):
     """
@@ -187,3 +187,32 @@ for model, acc in answers1.items():
     print(f"Dataset 1 - {model} Accuracy: {acc:.4f}")
 for model, acc in answers2.items():
     print(f"Dataset 2 - {model} Accuracy: {acc:.4f}")   
+
+#---------------------------------------------------------------------------------------
+#6. visualization of the decision boundaries for each model on both datasets
+
+for model_name, model in {**svmresults1, **svmresults2}.items():
+    plt.figure(figsize=(8, 6))
+    plt.title(f"Decision Boundary for {model_name}")
+    
+    # Create a mesh grid for plotting decision boundaries
+    x_min, x_max = x1[:, 0].min() - 0.1, x1[:, 0].max() + 0.1
+    y_min, y_max = x1[:, 1].min() - 0.1, x1[:, 1].max() + 0.1
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
+    
+    # Predict on the mesh grid
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    
+    # Plot the decision boundary and training points
+    plt.contourf(xx, yy, Z, alpha=0.8)
+    plt.scatter(x1_train[:, 0], x1_train[:, 1], c=y1_train, edgecolors='k', marker='o', label='Train Dataset 1')
+    plt.scatter(x2_train[:, 0], x2_train[:, 1], c=y2_train, edgecolors='k', marker='s', label='Train Dataset 2')
+    
+    plt.xlabel('Feature 1')
+    plt.ylabel('Feature 2')
+    plt.legend()
+    plt.show()
+
+#---------------------------------------------------------------------------------------
+#B.II.
