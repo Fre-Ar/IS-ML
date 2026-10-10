@@ -96,26 +96,6 @@ def gradient_mse(X,Y,theta):
     gradient = (1/m) * (X.T @ (predictions - Y))
     return gradient
 
-#first iteration of gradient descent
-theta = np.array([0, 0])
-learning_rate = 0.01
-X_with_bias = np.c_[np.ones(data['X_normalized'].shape[0]), data['X_normalized']]
-Y_normalized = data['Y_normalized'].values
-gradient = gradient_mse(X_with_bias, Y_normalized, theta)
-theta = theta - learning_rate * gradient
-print("Updated theta after one iteration of gradient descent:")
-print(theta)
-
-#---------------------------------------------------------------------------------------
-#6. Linear regression + gradient descent - 2nd iteration
-gradient = gradient_mse(X_with_bias, Y_normalized, theta)
-theta = theta - learning_rate * gradient
-print("Updated theta after two iterations of gradient descent:")
-print(theta)
-#TODO:plotting
-
-#---------------------------------------------------------------------------------------
-#7. Linear regression + gradient descent - n iterations
 def gradient_descent(X, Y, theta, learning_rate, num_iterations):
     """
     Perform gradient descent to optimize the model parameters.
@@ -130,8 +110,25 @@ def gradient_descent(X, Y, theta, learning_rate, num_iterations):
         gradient = gradient_mse(X, Y, theta)
         theta = theta - learning_rate * gradient
     return theta
-X= data['X_normalized'].values
-Y= data['Y_normalized'].values
+#first iteration of gradient descent
+theta = np.array([0, 0])
+learning_rate = 0.01
+X_with_bias = np.c_[np.ones(data['X_normalized'].shape[0]), data['X_normalized']]
+Y_normalized = data['Y_normalized'].values
+theta = gradient_descent(X_with_bias, Y_normalized, theta, learning_rate, 1)
+print("Updated theta after one iteration of gradient descent:")
+print(theta)
+
+#---------------------------------------------------------------------------------------
+#6. Linear regression + gradient descent - 2nd iteration
+theta = gradient_descent(X_with_bias, Y_normalized, theta, learning_rate, 2)
+print("Updated theta after two iterations of gradient descent:")
+print(theta)
+#TODO:plotting
+
+#---------------------------------------------------------------------------------------
+#7. Linear regression + gradient descent - n iterations
+
 theta = gradient_descent(X_with_bias, Y_normalized, theta, learning_rate, 1000)
 
 Y_pred = X_with_bias @ theta
@@ -152,6 +149,6 @@ def regression_model(x,theta):
     return: Predictions (numpy array)
     """
     x = x.reshape(-1, 1)
-    X = np.hstack([np.ones_like(x), x, x**2])
+    A = np.hstack([np.ones_like(x), x, x**2])
     
-    return X @ theta
+    return A @ theta
