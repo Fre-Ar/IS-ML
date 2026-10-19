@@ -216,3 +216,36 @@ for model_name, model in {**svmresults1, **svmresults2}.items():
 
 #---------------------------------------------------------------------------------------
 #B.II.
+k_list = [1,2,5,20,50]
+
+def plot_knn_decision_boundaries(x_train, y_train, k_list,dataset="1"):
+    """
+    Plots the decision boundaries for KNN with different values of k.
+    params:
+        x_train: training features (numpy array)
+        y_train: training labels (numpy array)
+        k_list: list of k values to evaluate
+    """
+    for k in k_list:
+        knn = KNeighborsClassifier(n_neighbors=k)
+        knn.fit(x_train, y_train)
+        
+        plt.figure(figsize=(8, 6))
+        plt.title(f"KNN Decision Boundary with k={k} for Dataset {dataset}")
+        x_min, x_max = x_train[:, 0].min() - 0.1, x_train[:, 0].max() + 0.1
+        y_min, y_max = x_train[:, 1].min() - 0.1, x_train[:, 1].max() + 0.1
+        xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
+        
+        Z = knn.predict(np.c_[xx.ravel(), yy.ravel()])
+        Z = Z.reshape(xx.shape)
+    
+        plt.contourf(xx, yy, Z, alpha=0.8)
+        plt.scatter(x_train[:, 0], x_train[:, 1], c=y_train, edgecolors='k', marker='o')
+        
+        plt.xlabel('Feature 1')
+        plt.ylabel('Feature 2')
+        plt.show()
+        
+plot_knn_decision_boundaries(x1_train, y1_train, k_list, dataset="1")
+plot_knn_decision_boundaries(x2_train, y2_train, k_list, dataset="2")
+
