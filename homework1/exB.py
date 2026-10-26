@@ -17,7 +17,7 @@ RANGE= (0.0,1.0)
 
 
 
-cov1 = np.array([[0.015, 0.003], [0.003, 0.015]])
+COV1 = np.array([[0.015, 0.003], [0.003, 0.015]])
 
 def generate_dataset1(cov:np.ndarray):
    """
@@ -55,7 +55,7 @@ def generate_dataset1(cov:np.ndarray):
    return X, y
 
 print("Generating Dataset 1...")
-x1,y1 = generate_dataset1(cov1)
+x1,y1 = generate_dataset1(COV1)
 print("Dataset 1 generated successfully.")
 print(f"Features shape: {x1.shape}, Labels shape: {y1.shape}")
 print(f"Features:\n{x1}\nLabels:\n{y1}")
