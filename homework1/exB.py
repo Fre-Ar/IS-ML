@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from utils.const import *
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn import svm
 import seaborn as sns
 
@@ -183,6 +184,32 @@ def split_dataset(x:np.ndarray,y:np.ndarray,train_test_split:float):
     
     return x[train_indices], x[test_indices], y[train_indices], y[test_indices]
 
+def split_indices(y, train_frac=TRAIN_TEST_SPLIT, seed=SEED):
+    """
+    Performs a stratified split of the dataset into training and testing sets.
+    params:
+            y: labels (numpy array)
+            train_frac: proportion of the dataset to include in the train split
+            seed: seed for rng
+    return:
+        train, test (index arrays for train and test set)
+    """
+    return train_test_split(np.arange(len(y)), train_size=train_frac,
+                            stratify=y, random_state=seed)
+
+def kfold_indices(y, k=5, seed=SEED):
+    """
+    Performs a stratified k-fold 
+    params:
+            y: labels (numpy array)
+            k: number of folds
+            seed: seed for rng
+    return:
+        returns a list of (train_idx, val_idx) pairs.
+    """
+    skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
+    return list(skf.split(np.zeros(len(y)), y))
+
 #---------------------------------------------------------------------------------------
 #4. Train on Dataset 1 and Dataset 2 + 5. exploring parameters for SVM
 
@@ -351,12 +378,20 @@ def plot_knn_decision_boundaries(x_train, y_train, k_list,dataset="1"):
 
 if __name__ == "__main__":
     # B.I.
+    # Generate datasets
     print("Generating Datasets...")
     x1,y1 = generate_dataset1()
     x2,y2,outlier_mask = generate_dataset2(x1,y1)
     print("Datasets generated successfully.")
     
     plot_datasets(x1, y1, x2, y2, outlier_mask)
+
+    # split datasets into training and testing sets
+    train1, test1 = split_indices(y1)
+    x1_train, y1_train = x1[train1], y1[train1]
+    x1_test,  y1_test  = x1[test1],  y1[test1]
+    train2 = np.r_[train1, np.arange(len(y1), len(y2))]  
+    test2  = test1
 
     x1_train, x1_test, y1_train, y1_test = split_dataset(x1,y1,TRAIN_TEST_SPLIT)
     x2_train, x2_test, y2_train, y2_test = split_dataset(x2,y2,TRAIN_TEST_SPLIT)
