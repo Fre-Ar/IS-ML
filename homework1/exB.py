@@ -1,4 +1,3 @@
-import sys
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,7 +5,6 @@ import matplotlib.pyplot as plt
 from utils.const import *
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import MinMaxScaler
 from sklearn import svm
 import seaborn as sns
 
@@ -15,20 +13,27 @@ from scipy.linalg import inv
 #---------------------------------------------------------------------------------------
 # B.I.
 #---------------------------------------------------------------------------------------
+# Random num generation
+RNG = np.random.default_rng(SEED)
 # Parameters for the features
 
 RANGE= (0.0, 1.0)
-VAR = 0.03
-COVAR = 0.01
-COV = np.array([[VAR, COVAR], [COVAR, VAR]])
+VAR = 0.02
+COVAR = 0.015
 
-MEAN_0 = np.array([0.4, 0.4], dtype=float)
-MEAN_1 = np.array([0.6, 0.6], dtype=float)
+MEAN_0 = np.array([0.40, 0.45])
+COV_0 = np.array([[VAR, COVAR], [COVAR, VAR]])
+MEAN_1 = np.array([0.60, 0.55])
+COV_1 = np.array([[VAR, -COVAR], [-COVAR, VAR]])
+
 SAMPLES = 80
 
 # Dataset 2 params
 OUTLIERS_PER_CLASS = 4
 MIN_DIST = 3 # 3 standard deviations away from the mean of the class
+
+# class colors for plotting
+COLORS = {0: "blue", 1: "red"}
 
 TRAIN_TEST_SPLIT = 0.8
 
@@ -41,9 +46,7 @@ KERNELS = ['linear', 'poly', 'rbf', 'sigmoid']
 K_LIST = [1,2,5,20,50]
 
 # Dataset 1 creation.
-def generate_dataset1(cov:np.ndarray, 
-                      mean_class_0:np.ndarray=MEAN_0,
-                      mean_class_1:np.ndarray=MEAN_1):
+def generate_dataset1():
     """
     This function generates a synthetic dataset for binary calssification.
     We assume 2 classes, 2 features, 80 samples split across 2 states. 
@@ -58,17 +61,16 @@ def generate_dataset1(cov:np.ndarray,
     return: 
             features (numpy array), labels (numpy array)
     """
-    rng = np.random.default_rng(SEED)
-   
+    
     samples_per_class = SAMPLES // 2
    
-    X0=rng.multivariate_normal(mean_class_0, cov, samples_per_class)
-    X1=rng.multivariate_normal(mean_class_1, cov, samples_per_class)
+    X0 = RNG.multivariate_normal(MEAN_0, COV_0, samples_per_class)
+    X1 = RNG.multivariate_normal(MEAN_1, COV_1, samples_per_class)
    
     X = np.vstack((X0, X1))
     y = np.array([0]*samples_per_class + [1]*samples_per_class)
    
-    idx = rng.permutation(SAMPLES)
+    idx = RNG.permutation(SAMPLES)
     X, y = X[idx], y[idx]
     
     return X, y
@@ -76,110 +78,87 @@ def generate_dataset1(cov:np.ndarray,
 #---------------------------------------------------------------------------------------
 # Dataset 2 creation (Dataset 1 + outliers)
 
-def generate_dataset2(cov:np.ndarray,
-                      x:np.ndarray,
-                      y:np.ndarray,
-                      min_dist:float):
+def generate_outliers(mean, cov, n):
     """
-    Genarates outliers and adds them to the original dataset.
+        Generates n outliers given a mean and covariance matrix for a class.
+        params:
+            mean: mean of the class
+            cov: covariance matrix of the class
+            n: number of outliers to generate
+        return: 
+            outliers (numpy array)
+    """
+    outliers = []
+    # Invert the covariance matrices once for the Mahalanobis calculation
+    inv_cov = inv(cov)
+    # Rejection sampling: keep drawing until the point is far from its class mean
+    while len(outliers) < n:
+        p = RNG.multivariate_normal(mean, cov)
+        # Check if it's far enough (w.r.t. the cluster's covariance shape)
+        if mahalanobis(p, mean, inv_cov) >= MIN_DIST:
+            outliers.append(p)
+    return np.array(outliers)  
+
+def generate_dataset2(x:np.ndarray, y:np.ndarray):
+    """
+    Generates outliers and adds them to the original dataset.
     params:
-    cov: covariance matrix for the outliers
         x: original features
         y: original labels
-        min_dist: minimum distance of the outliers from their class means
     return: 
         features (numpy array), labels (numpy array)
     """
-    rng = np.random.default_rng(SEED)
-    X_out_list, y_out_list = [], []
+    # generate the outliers
+    outliers_0 = generate_outliers(MEAN_0, COV_0, OUTLIERS_PER_CLASS)
+    outliers_1 = generate_outliers(MEAN_1, COV_1, OUTLIERS_PER_CLASS)
+
+    # Append the outliers to the original dataset
+    X_new = np.vstack([x, outliers_0, outliers_1])
+    y_new = np.hstack([y, 
+                       np.zeros(OUTLIERS_PER_CLASS, int), 
+                       np.ones(OUTLIERS_PER_CLASS, int)])
+    is_outlier = np.arange(len(X_new)) >= len(x)
     
-    # Invert the covariance matrix once for the Mahalanobis calculation
-    inv_cov = inv(cov)
+    return X_new, y_new, is_outlier
 
-    for label in np.unique(y):
-        mean = x[y == label].mean(axis=0)
 
-        # Rejection sampling: keep drawing until the point is far from its class mean
-        pts = []
-        while len(pts) < OUTLIERS_PER_CLASS:
-            p = rng.multivariate_normal(mean, cov)
-            
-            # Check if it's far enough (w.r.t. the cluster's covariance shape)
-            dist = mahalanobis(p, mean, inv_cov)
-            
-            if dist > min_dist:
-                pts.append(p)
-
-        X_out_list.append(np.array(pts))
-        y_out_list.append(np.full(OUTLIERS_PER_CLASS, label))
-
-    X_out = np.vstack(X_out_list)
-    y_out = np.hstack(y_out_list)
-
-    X_new = np.vstack([x, X_out])
-    y_new = np.hstack([y, y_out])
-
-    return X_new, y_new
-
-def scale_datasets(x1: np.ndarray, x2: np.ndarray):
+def scatter_dataset(ax, X, y, is_outlier=None, title=""):
+    """Scatter plot of one dataset; outliers get a lime ring and their own legend entry."""
+    if is_outlier is None:
+        is_outlier = np.zeros(len(y), dtype=bool)
+    for c in (0, 1):
+        # regular points                                   
+        m = (y == c) & ~is_outlier
+        ax.scatter(X[m, 0], X[m, 1], color=COLORS[c], label=f"Class {c}")
+    for c in (0, 1):
+        # outliers                                   
+        m = (y == c) & is_outlier
+        if m.any():
+            ax.scatter(X[m, 0], X[m, 1], color=COLORS[c], edgecolor="lime",
+                       linewidth=2.5, s=120, label=f"Class {c} outlier")
+    ax.set_title(title)
+    ax.set_xlabel("Feature 1")
+    ax.set_ylabel("Feature 2")
+    ax.set_aspect("equal")
+    
+def plot_datasets(x1, y1, x2, y2, is_outlier):
     """
-    Fits scaler on the combined full range of Dataset 2 to ensure 
-    no point in either dataset exceeds [0.0, 1.0], while maintaining 
-    identical scales between both datasets.
-    """
-    scaler = MinMaxScaler(feature_range=RANGE)
-    
-    # Fit the scaler on the dataset with the widest range (dataset 2 has outliers)
-    scaler.fit(x2)
-    
-    # Transform both datasets using this global scaler
-    x1_scaled = scaler.transform(x1)
-    x2_scaled = scaler.transform(x2)
-    
-    return x1_scaled, x2_scaled
-
-def plot_datasets(x1:np.ndarray,y1:np.ndarray,x2:np.ndarray,y2:np.ndarray):
-    """
-    Plots the original dataset and the dataset with outliers.
-    params:
-        x1: original features (numpy array)
-        y1: original labels (numpy array)
-        x2: features with outliers (numpy array)
-        y2: labels with outliers (numpy array)
-    """
-    plt.figure(figsize=(12, 6))
-    
-    # Plot Dataset 1
-    plt.subplot(1, 2, 1)
-    plt.title("Dataset 1")
-    plt.scatter(x1[y1 == 0][:, 0], x1[y1 == 0][:, 1], color='blue', label='Class 0')
-    plt.scatter(x1[y1 == 1][:, 0], x1[y1 == 1][:, 1], color='red', label='Class 1')
-    plt.xlabel('Feature 1')
-    plt.ylabel('Feature 2')
-    plt.legend()
-    
-    # Plot Dataset 2
-    plt.subplot(1, 2, 2)
-    plt.title("Dataset 2 (with Outliers)")
-    plt.scatter(x2[y2 == 0][:, 0], x2[y2 == 0][:, 1], color='blue', label='Class 0')
-    plt.scatter(x2[y2 == 1][:, 0], x2[y2 == 1][:, 1], color='red', label='Class 1')
-    
-    # Highlight outliers
-    outlier_mask = np.isin(np.arange(len(y2)), np.arange(len(y1), len(y2)))
-    outlier_colors = np.where(y2[outlier_mask] == 0, 'blue', 'red')
-    plt.scatter(x2[outlier_mask][:, 0], x2[outlier_mask][:, 1], 
-                c=outlier_colors,        
-                edgecolor='lime',      
-                linewidth=2.5,           
-                s=120,                   
-                label='Outliers')
-    
-    plt.xlabel('Feature 1')
-    plt.ylabel('Feature 2')
-    plt.legend()
-    
-    #plt.tight_layout()
+        Plots the original dataset and the dataset with outliers.
+        params:
+            x1: original features (numpy array)
+            y1: original labels (numpy array)
+            x2: features with outliers (numpy array)
+            y2: labels with outliers (numpy array)
+            is_outlier: boolean array indicating which points are outliers in dataset 2
+        """
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True,
+                             constrained_layout=True)
+    scatter_dataset(axes[0], x1, y1, title="Dataset 1")
+    scatter_dataset(axes[1], x2, y2, is_outlier, title="Dataset 2 (with outliers)")
+    handles, labels = axes[1].get_legend_handles_labels()   # Dataset 2 has every entry
+    fig.legend(handles, labels, loc="outside lower center", ncol=4)
     plt.show()
+
 
 #---------------------------------------------------------------------------------------
 #3.Split Dataset 1 and Dataset 2
@@ -373,14 +352,11 @@ def plot_knn_decision_boundaries(x_train, y_train, k_list,dataset="1"):
 if __name__ == "__main__":
     # B.I.
     print("Generating Datasets...")
-    x1_raw,y1 = generate_dataset1(COV)
-    x2_raw,y2 = generate_dataset2(COV,x1_raw,y1,MIN_DIST)
-    x1, x2 = scale_datasets(x1_raw, x2_raw)
+    x1,y1 = generate_dataset1()
+    x2,y2,outlier_mask = generate_dataset2(x1,y1)
     print("Datasets generated successfully.")
-    #print(f"Features shape: {x1.shape}, Labels shape: {y1.shape}")
-    #print(f"Features:\n{x1}\nLabels:\n{y1}")
     
-    plot_datasets(x1, y1, x2, y2)
+    plot_datasets(x1, y1, x2, y2, outlier_mask)
 
     x1_train, x1_test, y1_train, y1_test = split_dataset(x1,y1,TRAIN_TEST_SPLIT)
     x2_train, x2_test, y2_train, y2_test = split_dataset(x2,y2,TRAIN_TEST_SPLIT)
