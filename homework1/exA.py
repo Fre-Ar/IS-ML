@@ -1,4 +1,3 @@
-import sys
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -189,31 +188,44 @@ print(f"Final cost of least squares closed form solution: {final_cost_ls}")
 
 # polynomial regression
 
-def cost_function(X, Y, theta):
+def quartic_cost(X, Y, theta):
     n = len(Y)
     pred_X = X @ theta
     cost = (1/(4*n)) * np.sum(np.power(Y - pred_X,4))
     return cost
 
-def cost_gradient(X, Y, theta):
+def quartic_gradient(X, Y, theta):
     n = len(Y)
     pred_X = X @ theta
-    gradient = -(1/n) * (X.T @ np.power((Y - pred_X),3))
+    gradient = - (1/n) * (X.T @ np.power((Y - pred_X),3))
     return gradient
 
+rng = np.random.default_rng(SEED)
 theta = rng.standard_normal(3)
 print(f"Starting theta for polynomial regression: {theta}")
-learning_rate = 0.1
-iterations = 1000
+learning_rate = 0.01
+iterations = 5000
 
 X = np.column_stack([np.ones(n), X_s, X_s**2])
-theta, costs = gradient_descent(X, Y_s, theta, learning_rate, iterations, cost_function=cost_function, cost_gradient=cost_gradient, save_costs=True)
+theta, costs = gradient_descent(X, Y_s, theta, learning_rate, iterations, cost_function=quartic_cost, cost_gradient=quartic_gradient, save_costs=True)
 
-# Plot the costs over iterations to visualize convergence
-plt.plot(costs)
-plt.title(f"Costs over {iterations} iterations")
-plt.xlabel("Iteration number")
-plt.ylabel("Cost value")
+# plot the costs over iterations to visualize convergence
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+# normal Plot
+ax1.plot(costs)
+ax1.set_title(f"Costs over {iterations} iterations")
+ax1.set_xlabel("Iteration number")
+ax1.set_ylabel("Cost value")
+
+# logarithmic Plot
+ax2.plot(costs)
+ax2.set_yscale('log')
+ax2.set_title(f"Costs over {iterations} iterations (Log Scale)")
+ax2.set_xlabel("Iteration number")
+ax2.set_ylabel("Cost value (Log)")
+
+plt.tight_layout()
 plt.show()
 
 print(f"Final cost: {costs[-1]}")
