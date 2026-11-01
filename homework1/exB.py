@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from utils.const import *
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import MinMaxScaler
 from sklearn import svm
 import seaborn as sns
 
@@ -67,10 +68,9 @@ def generate_dataset1(cov:np.ndarray,
     X = np.vstack((X0, X1))
     y = np.array([0]*samples_per_class + [1]*samples_per_class)
    
-    X = np.clip(X, RANGE[0], RANGE[1])
-   
     idx = rng.permutation(SAMPLES)
     X, y = X[idx], y[idx]
+    
     return X, y
 
 #---------------------------------------------------------------------------------------
@@ -107,10 +107,7 @@ def generate_dataset2(cov:np.ndarray,
             # Check if it's far enough (w.r.t. the cluster's covariance shape)
             dist = mahalanobis(p, mean, inv_cov)
             
-            # Check if it's within [0.0, 1.0]
-            in_bounds = all(RANGE[0] <= p_i <= RANGE[1] for p_i in p)
-            
-            if dist > min_dist and in_bounds:
+            if dist > min_dist:
                 pts.append(p)
 
         X_out_list.append(np.array(pts))
@@ -123,6 +120,23 @@ def generate_dataset2(cov:np.ndarray,
     y_new = np.hstack([y, y_out])
 
     return X_new, y_new
+
+def scale_datasets(x1: np.ndarray, x2: np.ndarray):
+    """
+    Fits scaler on the combined full range of Dataset 2 to ensure 
+    no point in either dataset exceeds [0.0, 1.0], while maintaining 
+    identical scales between both datasets.
+    """
+    scaler = MinMaxScaler(feature_range=RANGE)
+    
+    # Fit the scaler on the dataset with the widest range (dataset 2 has outliers)
+    scaler.fit(x2)
+    
+    # Transform both datasets using this global scaler
+    x1_scaled = scaler.transform(x1)
+    x2_scaled = scaler.transform(x2)
+    
+    return x1_scaled, x2_scaled
 
 def plot_datasets(x1:np.ndarray,y1:np.ndarray,x2:np.ndarray,y2:np.ndarray):
     """
@@ -164,7 +178,7 @@ def plot_datasets(x1:np.ndarray,y1:np.ndarray,x2:np.ndarray,y2:np.ndarray):
     plt.ylabel('Feature 2')
     plt.legend()
     
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.show()
 
 #---------------------------------------------------------------------------------------
@@ -358,13 +372,13 @@ def plot_knn_decision_boundaries(x_train, y_train, k_list,dataset="1"):
 
 if __name__ == "__main__":
     # B.I.
-    print("Generating Dataset 1...")
-    x1,y1 = generate_dataset1(COV)
-    print("Dataset 1 generated successfully.")
-    print(f"Features shape: {x1.shape}, Labels shape: {y1.shape}")
-    print(f"Features:\n{x1}\nLabels:\n{y1}")
-    
-    x2,y2 = generate_dataset2(COV,x1,y1,MIN_DIST)
+    print("Generating Datasets...")
+    x1_raw,y1 = generate_dataset1(COV)
+    x2_raw,y2 = generate_dataset2(COV,x1_raw,y1,MIN_DIST)
+    x1, x2 = scale_datasets(x1_raw, x2_raw)
+    print("Datasets generated successfully.")
+    #print(f"Features shape: {x1.shape}, Labels shape: {y1.shape}")
+    #print(f"Features:\n{x1}\nLabels:\n{y1}")
     
     plot_datasets(x1, y1, x2, y2)
 

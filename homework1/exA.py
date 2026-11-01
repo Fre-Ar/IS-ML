@@ -2,13 +2,12 @@ import sys
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-# Import const.py from the utils package
 from utils.const import *
 
 #---------------------------------------------------------------------------------------
-#A.I
+# A.I
 #---------------------------------------------------------------------------------------
-#1. data acquisition
+# 1. data acquisition
 df = pd.read_excel(INPUT_FILE_PATH, sheet_name="Sheet5")
 print(df.head())
 start_index = (GROUP_NUMBER -1)*20+2
@@ -21,21 +20,21 @@ print(data)
 
 #---------------------------------------------------------------------------------------
 
-#2. data transformation
-#visualization of the data as justification for min-max normalization (no big outliers)
-data.plot(x='X', y='Y', kind='scatter')
+# 2. data transformation
+# visualization of the data as justification for min-max normalization (no big outliers)
+data.plot(x='X', y='Y', kind='scatter', title='Scatter plot of the data (pre-transformation)')
 plt.show()
-#min max normalisation
-minX = data['X'].min()
-maxX = data['X'].max()
-minY = data['Y'].min()
-maxY = data['Y'].max()
+# min max normalisation
+minX, maxX = data['X'].min(), data['X'].max()
+minY, maxY = data['Y'].min(), data['Y'].max()
 # Normalize the data
 data['X_normalized'] = (data['X'] - minX) / (maxX - minX)
 data['Y_normalized'] = (data['Y'] - minY) / (maxY - minY)
 
 print("Data after min-max normalization:")
 print(data)
+data.plot(x='X_normalized', y='Y_normalized', kind='scatter', title='Scatter plot of the data (post-normalization)')
+plt.show()
 
 # Extract the normalized X and Y values and row count for subsequent use
 X_normalized = data['X_normalized'].values
@@ -43,9 +42,10 @@ Y_normalized = data['Y_normalized'].values
 n = X_normalized.shape[0]
 
 #---------------------------------------------------------------------------------------
-#3. least squared closed form solution
+# 3. least squares closed form solution
 
 # Add a bias term (intercept) to the input features (used later too)
+# so multiplication with theta will include the intercept term theta_0
 X_with_bias = np.c_[np.ones(n), X_normalized]
 
 def least_squared_closed_form(X_with_bias, Y_normalized):
@@ -75,7 +75,7 @@ def plot_model(X_matrix, theta):
 plot_model(X_matrix, ls_theta)
 
 #---------------------------------------------------------------------------------------
-#4.Linear regression + gradient descent - cost function
+# 4.Linear regression + gradient descent - cost function
 # we will use mean squared error as the cost function (penalizing large errors more than small errors)
 
 def mse_cost_function(X, Y, theta):
@@ -93,7 +93,7 @@ def mse_cost_function(X, Y, theta):
     return cost
 
 #---------------------------------------------------------------------------------------
-#5. Linear regression + gradient descent - gradient descent 1st iteration
+# 5. Linear regression + gradient descent - gradient descent 1st iteration
 
 def mse_gradient(X, Y, theta):
     """
@@ -105,7 +105,7 @@ def mse_gradient(X, Y, theta):
     """
     m = len(Y)
     pred_X = X @ theta
-    gradient = -(1/m) * (X.T @ (Y - pred_X))
+    gradient = (1/m) * (X.T @ (pred_X - Y))
     return gradient
 
 def gradient_descent(X, Y, theta, learning_rate, num_iterations, cost_function=mse_cost_function, cost_gradient=mse_gradient, save_costs=False):
@@ -147,7 +147,7 @@ print(theta)
 plot_model(X_matrix, theta)
 
 #---------------------------------------------------------------------------------------
-#6. Linear regression + gradient descent - 2nd iteration
+# 6. Linear regression + gradient descent - 2nd iteration
 theta = np.array([0, 0])
 theta = gradient_descent(X_with_bias, Y_normalized, theta, learning_rate, 2)
 print("Updated theta after two iterations of gradient descent:")
@@ -156,7 +156,7 @@ print(theta)
 plot_model(X_matrix, theta)
 
 #---------------------------------------------------------------------------------------
-#7. Linear regression + gradient descent - n iterations
+# 7. Linear regression + gradient descent - n iterations
 theta = np.array([0, 0])
 iterations = 500
 theta, costs = gradient_descent(X_with_bias, Y_normalized, theta, learning_rate, iterations, save_costs=True)
@@ -177,10 +177,10 @@ plot_model(X_matrix, theta)
 
 
 #---------------------------------------------------------------------------------------
-#A.II.
+# A.II.
 #---------------------------------------------------------------------------------------
 
-#polynomial regression
+# polynomial regression
 
 def cost_function(X, Y, theta):
     n = len(Y)
