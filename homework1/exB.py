@@ -5,6 +5,8 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.metrics import accuracy_score, ConfusionMatrixDisplay
+from sklearn.inspection import DecisionBoundaryDisplay
+from matplotlib.colors import ListedColormap
 from sklearn import svm
 
 from scipy.spatial.distance import mahalanobis
@@ -43,12 +45,13 @@ TRAIN_TEST_SPLIT = 0.8
 # Model Hyperparameters
 N_NEIGHBORS = 5
 C = 1.0
-KERNELS = ['linear', 'poly', 'rbf', 'sigmoid']
+KERNELS = ['linear', 'poly', 'rbf']
+C_VALUES = [0.01, 1, 100]
 
 # B.II. params
 K_LIST = [1,2,5,20,50]
 
-# Dataset 1 creation.
+# 1. Dataset 1 creation.
 def generate_dataset1():
     """
     This function generates a synthetic dataset for binary calssification.
@@ -79,7 +82,7 @@ def generate_dataset1():
     return X, y
 
 #---------------------------------------------------------------------------------------
-# Dataset 2 creation (Dataset 1 + outliers)
+# 2. Dataset 2 creation (Dataset 1 + outliers)
 
 def generate_outliers(mean, cov, n):
     """
@@ -164,7 +167,7 @@ def plot_datasets(x1, y1, x2, y2, is_outlier):
 
 
 #---------------------------------------------------------------------------------------
-#3.Split Dataset 1 and Dataset 2
+# 3.Split Dataset 1 and Dataset 2
 
 def split_indices(y, train_frac=TRAIN_TEST_SPLIT, seed=SEED):
     """
@@ -216,7 +219,7 @@ def plot_split(ax, X, y, train_idx, test_idx, title=""):
     ax.set_aspect("equal")
 
 #---------------------------------------------------------------------------------------
-#4. Train on Dataset 1 and Dataset 2 + 5. exploring parameters for SVM
+# 4. Train on Dataset 1 and Dataset 2 + 5. exploring parameters for SVM
 
 def get_models():
     return {
@@ -262,73 +265,81 @@ def plot_confusion_matrices(fitted, x_test, y_test, title):
     fig.suptitle(title)
     plt.show()
 
+#---------------------------------------------------------------------------------------
+# 5. exploring params for SVM
+def get_svm_models(C_values=C_VALUES, kernels=KERNELS):
+    """
+    Generates a dictionary of SVM models with different kernels and C values.
+    params:
+        C_values: list of C values to evaluate
+        kernels: list of kernel types to evaluate
+    return:
+        Dictionary of SVM models
+    """
+    return {
+        f"SVM {kernel} (C={C})": svm.SVC(kernel=kernel, C=C) 
+        for kernel in kernels for C in C_values
+    }
         
 #---------------------------------------------------------------------------------------
-#6. visualization of the decision boundaries for each model on both datasets
-def plot_decision_boundary(model, x_train, y_train, x_test, y_test, title):
+# 6. visualization of the decision boundaries for each model on both datasets
+def plot_decision_boundaries(fitted_models, x_train, y_train, x_test, y_test, dataset_name):
     """
-    Plots the decision boundary for a given model.
-    params:
-        model: trained model (sklearn classifier)
-        x_train: training features (numpy array)
-        y_train: training labels (numpy array)
-        x_test: testing features (numpy array)
-        y_test: testing labels (numpy array)
-        title: title for the plot (string)
+    Plots the decision boundaries for a dictionary of fitted models in a horizontal grid.
     """
-    plt.figure(figsize=(8, 6))
-    plt.title(title)
+    fig, axes = plt.subplots(1, len(fitted_models), figsize=(4 * len(fitted_models), 4), constrained_layout=True)
     
-    # Create a mesh grid
-    x_min, x_max = x_train[:, 0].min() - 0.1, x_train[:, 0].max() + 0.1
-    y_min, y_max = x_train[:, 1].min() - 0.1, x_train[:, 1].max() + 0.1
-    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
+    # Ensure axes is iterable even if there's only one model
+    if len(fitted_models) == 1:
+        axes = [axes]
+        
+    # Use distinct colormaps for the background regions and the points
+    cm = plt.cm.RdBu
+    cm_bright = ListedColormap(["#FF0000", "#0000FF"])
     
-    # Predict on the mesh grid
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
+    # Get total feature bounds to pad the plot slightly
+    X_all = np.vstack([x_train, x_test])
     
-    # Plot decision boundary and training points
-    plt.contourf(xx, yy, Z, alpha=0.8)
-    plt.scatter(x_train[:, 0], x_train[:, 1], c=y_train, edgecolors='k', marker='o', label='Train')
-    plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, edgecolors='k', marker='x', label='Test')
-    
-    plt.xlabel('Feature 1')
-    plt.ylabel('Feature 2')
-    plt.legend()
+    for ax, (name, model) in zip(axes, fitted_models.items()):
+        # Plot the decision boundary using sklearn's built-in display tool
+        DecisionBoundaryDisplay.from_estimator(
+            model, X_all, cmap=cm, alpha=0.5, ax=ax, eps=0.5
+        )
+        
+        # Plot training points (circles)
+        ax.scatter(x_train[:, 0], x_train[:, 1], c=y_train, cmap=cm_bright, 
+                   edgecolors="k", marker="o", s=40, label="Train")
+        # Plot testing points (triangles)
+        ax.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap=cm_bright, 
+                   edgecolors="k", marker="^", s=40, label="Test")
+        
+        ax.set_title(f"{name}")
+        ax.set_xticks(())
+        ax.set_yticks(())
+        
+    fig.suptitle(f"Decision Boundaries - {dataset_name}", fontsize=14)
+    axes[0].legend(loc="lower right")
     plt.show()
     
 
 #---------------------------------------------------------------------------------------
 # B.II.
 #---------------------------------------------------------------------------------------
-def plot_knn_decision_boundaries(x_train, y_train, k_list,dataset="1"):
+def plot_knn_decision_boundaries(x_train, y_train, x_test, y_test, k_list=K_LIST, dataset_name=""):
     """
     Plots the decision boundaries for KNN with different values of k.
     params:
         x_train: training features (numpy array)
         y_train: training labels (numpy array)
+        x_test: testing features (numpy array)
+        y_test: testing labels (numpy array)
         k_list: list of k values to evaluate
+        dataset_name: dataset name (string)
     """
-    for k in k_list:
-        knn = KNeighborsClassifier(n_neighbors=k)
-        knn.fit(x_train, y_train)
-        
-        plt.figure(figsize=(8, 6))
-        plt.title(f"KNN Decision Boundary with k={k} for Dataset {dataset}")
-        x_min, x_max = x_train[:, 0].min() - 0.1, x_train[:, 0].max() + 0.1
-        y_min, y_max = x_train[:, 1].min() - 0.1, x_train[:, 1].max() + 0.1
-        xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
-        
-        Z = knn.predict(np.c_[xx.ravel(), yy.ravel()])
-        Z = Z.reshape(xx.shape)
-    
-        plt.contourf(xx, yy, Z, alpha=0.8)
-        plt.scatter(x_train[:, 0], x_train[:, 1], c=y_train, edgecolors='k', marker='o')
-        
-        plt.xlabel('Feature 1')
-        plt.ylabel('Feature 2')
-        plt.show()
+    knn_models = {f"k-NN (k={k})": KNeighborsClassifier(n_neighbors=k) for k in k_list}
+    res, fitted = train_and_eval(knn_models, x_train, y_train, x_test, y_test)
+    plot_decision_boundaries(fitted, x_train, y_train, x_test, y_test, dataset_name)
+
 
 if __name__ == "__main__":
     # B.I.
@@ -374,19 +385,34 @@ if __name__ == "__main__":
     print(pd.DataFrame(res1).T.round(4).to_latex())
     print(pd.DataFrame(res2).T.round(4).to_latex())    
         
+    # plot confusion matrices for both datasets
     plot_confusion_matrices(fitted1, x1_test, y1_test, "Dataset 1 - Confusion Matrices")
     plot_confusion_matrices(fitted2, x2_test, y2_test, "Dataset 2 - Confusion Matrices")
-    #answers1, gnb1, knn1, svmresults1 = train_and_eval_models(x1_train, y1_train, x1_test, y1_test, "Dataset 1")
-    #answers2, gnb2, knn2, svmresults2 = train_and_eval_models(x2_train, y2_train, x2_test, y2_test, "Dataset 2")
+    
+    # exploring different SVM params and kernels on both datasets
+    res_svm1, fitted_svm1 = train_and_eval(get_svm_models(), x1_train, y1_train, x1_test, y1_test)
+    res_svm2, fitted_svm2 = train_and_eval(get_svm_models(), x2_train, y2_train, x2_test, y2_test)
+    print(pd.DataFrame(res_svm1).T.round(4).to_latex())
+    print(pd.DataFrame(res_svm2).T.round(4).to_latex())
+    
+    # plot decision boundaries for select models on both datasets
+    models_to_plot_1 = {
+        "Naive Bayes": fitted1["Naive Bayes"],
+        "k-NN": fitted1["k-NN (k=5)"],
+        "SVM (RBF)": fitted1["SVM (RBF)"],
+        "SVM (Linear)": fitted_svm1["SVM linear (C=1)"] 
+    }
+    
+    models_to_plot_2 = {
+        "Naive Bayes": fitted2["Naive Bayes"],
+        "k-NN": fitted2["k-NN (k=5)"],
+        "SVM (RBF)": fitted2["SVM (RBF)"],
+        "SVM (Linear)": fitted_svm2["SVM linear (C=1)"]
+    }
+ 
+    plot_decision_boundaries(models_to_plot_1, x1_train, y1_train, x1_test, y1_test, "Dataset 1")
+    plot_decision_boundaries(models_to_plot_2, x2_train, y2_train, x2_test, y2_test, "Dataset 2")
 
-    #plot_confusion_matrices(x1_test, y1_test, f"Dataset 1 - Confusion Matrix", answers1, gnb1, knn1, svmresults1)
-    #plot_confusion_matrices(x2_test, y2_test, f"Dataset 2 - Confusion Matrix", answers2, gnb2, knn2, svmresults2)
-
-    #for model_name, model in [("GaussianNB", gnb1), ("KNN", knn1)] + [(f"SVM_{kernel}", svmresults1[kernel]) for kernel in KERNELS]:
-    #    plot_decision_boundary(model, x1_train, y1_train, x1_test, y1_test, f"Dataset 1 - {model_name} Decision Boundary")
-    #for model_name, model in [("GaussianNB", gnb2), ("KNN", knn2)] + [(f"SVM_{kernel}", svmresults2[kernel]) for kernel in KERNELS]:
-    #    plot_decision_boundary(model, x2_train, y2_train, x2_test, y2_test, f"Dataset 2 - {model_name} Decision Boundary")
-        
     # B.II. 
-    #plot_knn_decision_boundaries(x1_train, y1_train, K_LIST, dataset="1")
-    #plot_knn_decision_boundaries(x2_train, y2_train, K_LIST, dataset="2")
+    plot_knn_decision_boundaries(x1_train, y1_train, x1_test, y1_test, K_LIST, dataset_name="Dataset 1")
+    plot_knn_decision_boundaries(x2_train, y2_train, x2_test, y2_test, K_LIST, dataset_name="Dataset 2")
