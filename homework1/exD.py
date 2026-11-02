@@ -33,3 +33,5 @@ accuracies = {name: sum(acc_list) / len(acc_list) for name, acc_list in accuraci
 print("K-Fold Accuracies:")
 for name, acc in accuracies.items():
     print(f"{name}: {acc:.4f}")
+
+print(pd.DataFrame(accuracies, index=["K-Fold Accuracy"]).T.round(4).to_latex())
