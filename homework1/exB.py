@@ -166,26 +166,6 @@ def plot_datasets(x1, y1, x2, y2, is_outlier):
 #---------------------------------------------------------------------------------------
 #3.Split Dataset 1 and Dataset 2
 
-def split_dataset(x:np.ndarray,y:np.ndarray,train_test_split:float):
-    """
-    Splits the dataset into training and testing sets.
-    params:
-        x: features (numpy array)
-        y: labels (numpy array)
-        train_test_split: proportion of the dataset to include in the train split
-    return:
-        x_train, x_test, y_train, y_test (numpy arrays)
-    """
-    rng = np.random.default_rng(SEED)
-    samples = x.shape[0]
-    indices = rng.permutation(samples)
-    train_size = int(samples * train_test_split)
-    
-    train_indices = indices[:train_size]
-    test_indices = indices[train_size:]
-    
-    return x[train_indices], x[test_indices], y[train_indices], y[test_indices]
-
 def split_indices(y, train_frac=TRAIN_TEST_SPLIT, seed=SEED):
     """
     Performs a stratified split of the dataset into training and testing sets.
