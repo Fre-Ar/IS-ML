@@ -1,0 +1,7 @@
+numpy>=1.17          
+pandas>=2.0
+scipy>=1.7           # scipy.linalg.inv, scipy.spatial.distance.mahalanobis
+matplotlib>=3.7      # figure-level legend with loc="outside lower center"
+scikit-learn>=1.0    # ConfusionMatrixDisplay.from_estimator
+openpyxl             # pd.read_excel on the .xlsx data file (Exercise A)
+jinja2               # needed by DataFrame.to_latex in current pandas

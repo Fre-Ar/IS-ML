@@ -1,24 +1,25 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-# Import const.py from the utils package
-from utils.const import *
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.metrics import accuracy_score, ConfusionMatrixDisplay
 from sklearn import svm
-import seaborn as sns
 
 from scipy.spatial.distance import mahalanobis
 from scipy.linalg import inv
+
+from utils.const import *
 #---------------------------------------------------------------------------------------
 # B.I.
 #---------------------------------------------------------------------------------------
 # Random num generation
 RNG = np.random.default_rng(SEED)
-# Parameters for the features
 
-RANGE= (0.0, 1.0)
+# Dataset parameters
+SAMPLES = 80
+
 VAR = 0.02
 COVAR = 0.015
 
@@ -27,7 +28,6 @@ COV_0 = np.array([[VAR, COVAR], [COVAR, VAR]])
 MEAN_1 = np.array([0.60, 0.55])
 COV_1 = np.array([[VAR, -COVAR], [-COVAR, VAR]])
 
-SAMPLES = 80
 
 # Dataset 2 params
 OUTLIERS_PER_CLASS = 4
@@ -35,11 +35,13 @@ MIN_DIST = 3 # 3 standard deviations away from the mean of the class
 
 # class colors for plotting
 COLORS = {0: "blue", 1: "red"}
+LIGHT_COLORS = {0: "deepskyblue", 1: "lightcoral"}
 
+# Train-eval hyperparameters
 TRAIN_TEST_SPLIT = 0.8
 
-# SVM Hyperparameters
-N_NEIGHBORS = 3
+# Model Hyperparameters
+N_NEIGHBORS = 5
 C = 1.0
 KERNELS = ['linear', 'poly', 'rbf', 'sigmoid']
 
@@ -210,104 +212,76 @@ def kfold_indices(y, k=5, seed=SEED):
     skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
     return list(skf.split(np.zeros(len(y)), y))
 
+def plot_split(ax, X, y, train_idx, test_idx, title=""):
+    """
+    Plots the training and testing sets of a dataset.
+    params:
+        ax: matplotlib axis to plot on
+        X: features (numpy array)
+        y: labels (numpy array)
+        train_idx: indices of the training set
+        test_idx: indices of the testing set
+        title: title for the plot (string)
+    """
+    for idx, marker, name in [(train_idx, "o", "train"), (test_idx, "s", "test")]:
+        for c in COLORS.keys():
+            sel = idx[y[idx] == c]
+            color = LIGHT_COLORS[c] if name == "test" else COLORS[c]
+            ax.scatter(X[sel, 0], X[sel, 1], color=color, marker=marker,
+                       edgecolor="black" if name == "test" else "none",
+                       label=f"Class {c} ({name})")
+    ax.set_title(title)
+    ax.set_xlabel("Feature 1")
+    ax.set_ylabel("Feature 2")
+    ax.set_aspect("equal")
+
 #---------------------------------------------------------------------------------------
 #4. Train on Dataset 1 and Dataset 2 + 5. exploring parameters for SVM
 
-def accuracy(y_true:np.ndarray, y_pred:np.ndarray):
-    """
-    Calculates the accuracy of the predictions.
-    params:
-        y_true: true labels (numpy array)
-        y_pred: predicted labels (numpy array)
-    return:
-        accuracy (float)
-    """
-    return np.mean(y_true == y_pred)
-
-def train_and_eval_models(x1_train, y1_train, x1_test, y1_test, x2_train, y2_train, x2_test, y2_test):
-    """
-    Trains and evaluates GaussianNB, KNN, and SVM models on both datasets.
-    """
-    
-    gnb1 = GaussianNB()
-    gnb2 = GaussianNB()
-    gnb1.fit(x1_train, y1_train)
-    gnb2.fit(x2_train, y2_train)
-
-    knn1 = KNeighborsClassifier(n_neighbors=N_NEIGHBORS)
-    knn2 = KNeighborsClassifier(n_neighbors=N_NEIGHBORS)
-    knn1.fit(x1_train, y1_train)
-    knn2.fit(x2_train, y2_train)
-
-    svmresults1 = {}
-    svmresults2 = {}
-    for kernel in KERNELS:
-        svm1 = svm.SVC(kernel=kernel, C=C)
-        svm1.fit(x1_train, y1_train)
-        svm2 = svm.SVC(kernel=kernel, C=C)
-        svm2.fit(x2_train, y2_train)
-        svmresults1[kernel] = svm1
-        svmresults2[kernel] = svm2
-
-    answers1 = {
-        "GaussianNB": accuracy(y1_test, gnb1.predict(x1_test)),
-        "KNN": accuracy(y1_test, knn1.predict(x1_test)),
-        "SVM_linear": accuracy(y1_test, svmresults1['linear'].predict(x1_test)),
-        "SVM_poly": accuracy(y1_test, svmresults1['poly'].predict(x1_test)),
-        "SVM_rbf": accuracy(y1_test, svmresults1['rbf'].predict(x1_test)),
-        "SVM_sigmoid": accuracy(y1_test, svmresults1['sigmoid'].predict(x1_test))
-    }
-    answers2 = {
-        "GaussianNB": accuracy(y2_test, gnb2.predict(x2_test)),
-        "KNN": accuracy(y2_test, knn2.predict(x2_test)),
-        "SVM_linear": accuracy(y2_test, svmresults2['linear'].predict(x2_test)),
-        "SVM_poly": accuracy(y2_test, svmresults2['poly'].predict(x2_test)),
-        "SVM_rbf": accuracy(y2_test, svmresults2['rbf'].predict(x2_test)),
-        "SVM_sigmoid": accuracy(y2_test, svmresults2['sigmoid'].predict(x2_test))
+def get_models():
+    return {
+        "Naive Bayes": GaussianNB(),
+        "k-NN (k=5)": KNeighborsClassifier(n_neighbors=N_NEIGHBORS),
+        "SVM (RBF)": svm.SVC(kernel="rbf", C=C),
     }
 
-    for model, acc in answers1.items():
-        print(f"Dataset 1 - {model} Accuracy: {acc:.4f}")
-    for model, acc in answers2.items():
-        print(f"Dataset 2 - {model} Accuracy: {acc:.4f}")   
-        
-    return answers1, answers2, gnb1, gnb2, knn1, knn2, svmresults1, svmresults2
-    
-def plot_confusion_matrices(x_test, y_test, title, answers, gnb, knn, svmresults):
+def train_and_eval(x_train, y_train, x_test, y_test):
     """
-    Plots the confusion matrices for all models on one dataset.
+    Trains and evaluates GaussianNB, KNN, and SVM on a given dataset.
     params:
-        y_true: true labels (numpy array)
-        y_pred: predicted labels (numpy array)
-        title: title for the plot (string)
-        answers: dictionary of model accuracies
-        gnb: Gaussian Naive Bayes model
-        knn: K-Nearest Neighbors model
-        svmresults: dictionary of SVM models
+        x_train: training features (numpy array)
+        y_train: training labels (numpy array)   
         x_test: testing features (numpy array)
         y_test: testing labels (numpy array)
+    return:
+        results: dictionary of model accuracies
+        fitted: dictionary of fitted models
     """
-    from sklearn.metrics import confusion_matrix
-        
-    for model, acc in answers.items():
-            y_pred = None
-            if model == "GaussianNB":
-                y_pred = gnb.predict(x_test)
-            elif model == "KNN":
-                y_pred = knn.predict(x_test)
-            else:
-                kernel = model.split('_')[1]
-                y_pred = svmresults[kernel].predict(x_test)
-                 
-            cm = confusion_matrix(y_test, y_pred)
-            
-            plt.figure(figsize=(6, 5))
-            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                        xticklabels=np.unique(y_test), yticklabels=np.unique(y_test))
-            plt.title(f"{title}" + f"\n{model} Accuracy: {acc:.4f}")
-            plt.xlabel('Predicted')
-            plt.ylabel('True')
-            plt.show()
+    results, fitted = {}, {}
+    for name, model in get_models().items():
+        model.fit(x_train, y_train)
+        fitted[name] = model
+        results[name] = {"train": accuracy_score(y_train, model.predict(x_train)),
+                         "test":  accuracy_score(y_test,  model.predict(x_test))}
+    return results, fitted
+
+def plot_confusion_matrices(fitted, x_test, y_test, title):
+    """
+    Plots confusion matrices for all models on one dataset.
+    params:
+        fitted: dictionary of fitted models
+        x_test: testing features (numpy array)
+        y_test: testing labels (numpy array)
+        title: title for the plot (string)
+    """
+    fig, axes = plt.subplots(1, len(fitted), figsize=(4 * len(fitted), 4),
+                             constrained_layout=True)
+    for ax, (name, model) in zip(axes, fitted.items()):
+        ConfusionMatrixDisplay.from_estimator(model, x_test, y_test, ax=ax, colorbar=False, cmap="Blues")
+        ax.set_title(f"{name}\ntest acc = {model.score(x_test, y_test):.4f}")
+    fig.suptitle(title)
+    plt.show()
+
         
 #---------------------------------------------------------------------------------------
 #6. visualization of the decision boundaries for each model on both datasets
@@ -390,22 +364,49 @@ if __name__ == "__main__":
     train1, test1 = split_indices(y1)
     x1_train, y1_train = x1[train1], y1[train1]
     x1_test,  y1_test  = x1[test1],  y1[test1]
+    
     train2 = np.r_[train1, np.arange(len(y1), len(y2))]  
     test2  = test1
-
-    x1_train, x1_test, y1_train, y1_test = split_dataset(x1,y1,TRAIN_TEST_SPLIT)
-    x2_train, x2_test, y2_train, y2_test = split_dataset(x2,y2,TRAIN_TEST_SPLIT)
+    x2_train, y2_train = x2[train2], y2[train2]
+    x2_test,  y2_test  = x2[test2],  y2[test2]
     
-    answers1, answers2, gnb1, gnb2, knn1, knn2, svmresults1, svmresults2 = train_and_eval_models(x1_train, y1_train, x1_test, y1_test, x2_train, y2_train, x2_test, y2_test)
+    # print dataset table
+    table = pd.DataFrame({"x1": x2[:, 0], "x2": x2[:, 1], "class": y2,
+                       "outlier": np.where(outlier_mask, "yes", "")})
+    table["set"] = ""
+    table.loc[train2, "set"] = "train"
+    table.loc[test2, "set"] = "test"
+    print(table.round(4).to_string())                      
+    print(table.to_latex(index=False, float_format="%.4f", longtable=True,
+                        caption="All data points (rows without an outlier flag form Dataset 1).",
+                        label="tab:data"))
     
-    plot_confusion_matrices(x1_test, y1_test, f"Dataset 1 - Confusion Matrix", answers1, gnb1, knn1, svmresults1)
-    plot_confusion_matrices(x2_test, y2_test, f"Dataset 2 - Confusion Matrix", answers2, gnb2, knn2, svmresults2)
+    # plot the split datasets
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True, constrained_layout=True)
+    plot_split(axes[0], x1, y1, train1, test1, "Dataset 1")
+    plot_split(axes[1], x2, y2, train2, test2, "Dataset 2")
+    fig.legend(*axes[0].get_legend_handles_labels(), loc="outside lower center", ncol=4)
+    plt.show()
 
-    for model_name, model in [("GaussianNB", gnb1), ("KNN", knn1)] + [(f"SVM_{kernel}", svmresults1[kernel]) for kernel in KERNELS]:
-        plot_decision_boundary(model, x1_train, y1_train, x1_test, y1_test, f"Dataset 1 - {model_name} Decision Boundary")
-    for model_name, model in [("GaussianNB", gnb2), ("KNN", knn2)] + [(f"SVM_{kernel}", svmresults2[kernel]) for kernel in KERNELS]:
-        plot_decision_boundary(model, x2_train, y2_train, x2_test, y2_test, f"Dataset 2 - {model_name} Decision Boundary")
+    # train and evaluate models on both datasets
+    res1, fitted1 = train_and_eval(x1_train, y1_train, x1_test, y1_test)
+    res2, fitted2 = train_and_eval(x2_train, y2_train, x2_test, y2_test)
+    print(pd.DataFrame(res1).T.round(4).to_latex())
+    print(pd.DataFrame(res2).T.round(4).to_latex())    
+        
+    plot_confusion_matrices(fitted1, x1_test, y1_test, "Dataset 1 - Confusion Matrices")
+    plot_confusion_matrices(fitted2, x2_test, y2_test, "Dataset 2 - Confusion Matrices")
+    #answers1, gnb1, knn1, svmresults1 = train_and_eval_models(x1_train, y1_train, x1_test, y1_test, "Dataset 1")
+    #answers2, gnb2, knn2, svmresults2 = train_and_eval_models(x2_train, y2_train, x2_test, y2_test, "Dataset 2")
+
+    #plot_confusion_matrices(x1_test, y1_test, f"Dataset 1 - Confusion Matrix", answers1, gnb1, knn1, svmresults1)
+    #plot_confusion_matrices(x2_test, y2_test, f"Dataset 2 - Confusion Matrix", answers2, gnb2, knn2, svmresults2)
+
+    #for model_name, model in [("GaussianNB", gnb1), ("KNN", knn1)] + [(f"SVM_{kernel}", svmresults1[kernel]) for kernel in KERNELS]:
+    #    plot_decision_boundary(model, x1_train, y1_train, x1_test, y1_test, f"Dataset 1 - {model_name} Decision Boundary")
+    #for model_name, model in [("GaussianNB", gnb2), ("KNN", knn2)] + [(f"SVM_{kernel}", svmresults2[kernel]) for kernel in KERNELS]:
+    #    plot_decision_boundary(model, x2_train, y2_train, x2_test, y2_test, f"Dataset 2 - {model_name} Decision Boundary")
         
     # B.II. 
-    plot_knn_decision_boundaries(x1_train, y1_train, K_LIST, dataset="1")
-    plot_knn_decision_boundaries(x2_train, y2_train, K_LIST, dataset="2")
+    #plot_knn_decision_boundaries(x1_train, y1_train, K_LIST, dataset="1")
+    #plot_knn_decision_boundaries(x2_train, y2_train, K_LIST, dataset="2")
