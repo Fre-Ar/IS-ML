@@ -1,6 +1,7 @@
 from exB import generate_dataset1, split_indices, kfold_indices, train_and_eval 
 from sklearn import svm
 import pandas as pd
+import numpy as np
 
 Cs = [0.01,1,100]
 kernel = 'rbf'
@@ -20,7 +21,7 @@ res1, fitted1 = train_and_eval(get_models(), x_train, y_train, x_test, y_test)
 print(pd.DataFrame(res1).T.round(4).to_latex())
 
 models = get_models()
-accuracies = {name: [] for name in models.keys()}
+accuracies = {name: np.array([]) for name in models.keys()}
 
 for train_idx, val_idx in kfold_indices(y_train):
     x_fold_train, y_fold_train = x_train[train_idx], y_train[train_idx]
@@ -28,10 +29,10 @@ for train_idx, val_idx in kfold_indices(y_train):
     res, fitted = train_and_eval(models, x_fold_train, y_fold_train, x_fold_val, y_fold_val)
     for name, acc in res.items():
         accuracies[name].append(acc['test'])
-accuracies = {name: sum(acc_list) / len(acc_list) for name, acc_list in accuracies.items()}
+accuracies = {name: (np.mean(acc_list), np.std(acc_list)) for name, acc_list in accuracies.items()}
 
 print("K-Fold Accuracies:")
 for name, acc in accuracies.items():
-    print(f"{name}: {acc:.4f}")
+    print(f"{name}: {acc[0]:.4f} ± {acc[1]:.4f}")
 
 print(pd.DataFrame(accuracies, index=["K-Fold Accuracy"]).T.round(4).to_latex())
