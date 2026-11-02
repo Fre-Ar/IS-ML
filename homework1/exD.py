@@ -32,7 +32,7 @@ for train_idx, val_idx in kfold_indices(y_train):
 accuracies = {name: (np.mean(acc_list), np.std(acc_list)) for name, acc_list in accuracies.items()}
 
 print("K-Fold Accuracies:")
-for name, acc in accuracies.items():
-    print(f"{name}: {acc[0]:.4f} ± {acc[1]:.4f}")
+for name, acc, stdev in accuracies.items():
+    print(f"{name}: {acc:.4f} ± {stdev:.4f}")
 
 print(pd.DataFrame(accuracies, index=["K-Fold Accuracy"]).T.round(4).to_latex())
