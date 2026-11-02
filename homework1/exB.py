@@ -225,7 +225,7 @@ def get_models():
         "SVM (RBF)": svm.SVC(kernel="rbf", C=C),
     }
 
-def train_and_eval(x_train, y_train, x_test, y_test):
+def train_and_eval(models, x_train, y_train, x_test, y_test):
     """
     Trains and evaluates GaussianNB, KNN, and SVM on a given dataset.
     params:
@@ -238,7 +238,7 @@ def train_and_eval(x_train, y_train, x_test, y_test):
         fitted: dictionary of fitted models
     """
     results, fitted = {}, {}
-    for name, model in get_models().items():
+    for name, model in models.items():
         model.fit(x_train, y_train)
         fitted[name] = model
         results[name] = {"train": accuracy_score(y_train, model.predict(x_train)),
@@ -369,8 +369,8 @@ if __name__ == "__main__":
     plt.show()
 
     # train and evaluate models on both datasets
-    res1, fitted1 = train_and_eval(x1_train, y1_train, x1_test, y1_test)
-    res2, fitted2 = train_and_eval(x2_train, y2_train, x2_test, y2_test)
+    res1, fitted1 = train_and_eval(get_models(), x1_train, y1_train, x1_test, y1_test)
+    res2, fitted2 = train_and_eval(get_models(), x2_train, y2_train, x2_test, y2_test)
     print(pd.DataFrame(res1).T.round(4).to_latex())
     print(pd.DataFrame(res2).T.round(4).to_latex())    
         
