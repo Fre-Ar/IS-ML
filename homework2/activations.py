@@ -1,5 +1,5 @@
 import numpy as np
-from exA import Layer
+from layers import Layer
 
 def clip(x):
     return np.clip(x, -1028, 1028)  
@@ -14,6 +14,7 @@ class ReLU(Layer):
 
     def backward(self, grad_output):
         return grad_output * self.mask
+
 
 class Sigmoid(Layer):
     def __init__(self):
@@ -53,3 +54,11 @@ class Softplus(Layer):
         x = clip(self.x)
         sig = 1 / (1 + np.exp(-x))
         return grad_output * sig
+    
+    
+activation_layers = {
+    'relu': ReLU,
+    'sigmoid': Sigmoid,
+    'tanh': Tanh,
+    'softplus': Softplus
+}
