@@ -2,7 +2,7 @@ import numpy as np
 from layers import Layer
 
 def clip(x):
-    return np.clip(x, -1028, 1028)  
+    return np.clip(x, -1028.0, 1028.0)  
 
 class ReLU(Layer):
     def __init__(self):
@@ -11,6 +11,32 @@ class ReLU(Layer):
     def forward(self, x):
         self.mask = (x > 0)
         return np.maximum(0, x)
+
+    def backward(self, grad_output):
+        return grad_output * self.mask
+    
+class LeakyReLU(Layer):
+    def __init__(self, alpha=0.01):
+        self.mask = None
+        self.alpha = alpha
+
+    def forward(self, x):
+        self.mask = np.where(x > 0, 1.0, self.alpha)
+        return np.maximum(self.alpha * x, x)
+
+    def backward(self, grad_output):
+        return grad_output * self.mask
+    
+class ELU(Layer):
+    def __init__(self, alpha=0.1):
+        self.mask = None
+        self.alpha = alpha
+
+    def forward(self, x):
+        out = np.where(x > 0, x, self.alpha * np.expm1(x))
+        # reusing out to avoid a second exp call
+        self.mask = np.where(x > 0, 1.0, out + self.alpha)
+        return out
 
     def backward(self, grad_output):
         return grad_output * self.mask
@@ -55,10 +81,20 @@ class Softplus(Layer):
         sig = 1 / (1 + np.exp(-x))
         return grad_output * sig
     
+class Linear(Layer):
+    def forward(self, x):
+        return x
+
+    def backward(self, grad_output):
+        return grad_output 
+    
     
 activation_layers = {
     'relu': ReLU,
+    'leaky_relu': LeakyReLU,
+    'elu': ELU,
     'sigmoid': Sigmoid,
     'tanh': Tanh,
-    'softplus': Softplus
+    'softplus': Softplus,
+    'linear': Linear
 }
