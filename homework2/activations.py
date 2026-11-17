@@ -5,7 +5,7 @@ def clip(x):
     return np.clip(x, -1028.0, 1028.0)  
 
 class ReLU(Layer):
-    def __init__(self):
+    def __init__(self, **_):
         self.mask = None
 
     def forward(self, x):
@@ -43,7 +43,7 @@ class ELU(Layer):
 
 
 class Sigmoid(Layer):
-    def __init__(self):
+    def __init__(self, **_):
         self.out = None
 
     def forward(self, x):
@@ -57,7 +57,7 @@ class Sigmoid(Layer):
 
 
 class Tanh(Layer):
-    def __init__(self):
+    def __init__(self, **_):
         self.out = None
 
     def forward(self, x):
@@ -69,7 +69,7 @@ class Tanh(Layer):
 
 
 class Softplus(Layer):
-    def __init__(self):
+    def __init__(self, **_):
         self.x = None
 
     def forward(self, x):
@@ -82,6 +82,9 @@ class Softplus(Layer):
         return grad_output * sig
     
 class Linear(Layer):
+    def __init__(self, **_):
+        pass
+    
     def forward(self, x):
         return x
 

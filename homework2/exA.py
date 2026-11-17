@@ -9,13 +9,13 @@ SEED = 4
 
 def main():
     t0 = time.perf_counter()
-    
     np.random.seed(SEED)
+    
     dataset = Dataset(train_csv='homework2/THA2train.csv', val_csv='homework2/THA2validate.csv')
-    ae = AutoEncoder(acts=('leaky_relu', 'tanh', 'leaky_relu', 'sigmoid'), init='default')
+    ae = AutoEncoder(acts=('leaky_relu', 'linear', 'leaky_relu', 'sigmoid'), init='mixed', alpha=0.05)
     LR = 1e-2
     BATCH_SIZE = 64
-    trainer = Trainer(model=ae, loss= 'bce', lr=LR, batch_size=BATCH_SIZE, max_epochs=500)
+    trainer = Trainer(model=ae, loss='bce', lr=LR, batch_size=BATCH_SIZE, max_epochs=500)
     trainer.train(dataset.train_x, dataset.val_x)
     
     dt = time.perf_counter() - t0
@@ -28,4 +28,3 @@ def main():
 if __name__ == '__main__':
     
     main()
-    

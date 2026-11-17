@@ -1,6 +1,5 @@
 import copy
 import numpy as np
-import numpy.random as random
 from layers import Layer, LinearLayer
 from networks import AutoEncoder
 from metrics import loss_funcs, mse_metric
@@ -46,8 +45,8 @@ class Trainer:
         loss: str,
         lr: float = 0.01,
         early_stopping: bool = True,
-        patience: int = 5,
-        min_delta: float = 1e-5,
+        patience: int = 10,
+        min_delta: float = 1e-6,
         batch_size: int = 64,
         max_epochs: int = 500,
         capture_snapshots: bool = False,

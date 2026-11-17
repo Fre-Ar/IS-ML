@@ -1,21 +1,23 @@
 from layers import Layer, LinearLayer
 from activations import activation_layers
-from initialization import inits
+from initialization import INITS
 
 class AutoEncoder(Layer):
     def __init__(self,
                  layers = (784, 128, 16, 128, 784),
                  acts: tuple[str,...] = activation_layers.keys(),
-                 init='default'):
+                 init: str = 'default',
+                 alpha = 0.01):
         super().__init__()
-        assert len(acts) == len(layers) - 1, "Must provide one act per layer transition."
+        n_layers = len(layers) - 1
+        assert len(acts) == n_layers, "Must provide one act per layer transition."
         self.layers: list[Layer] = []
         
         for i in range(len(layers) - 1):
             linear = LinearLayer(layers[i], layers[i + 1])
-            inits[init](linear)
+            INITS[init](linear, act=acts[i], alpha=alpha)
             self.layers.append(linear)
-            self.layers.append(activation_layers[acts[i]]())
+            self.layers.append(activation_layers[acts[i]](alpha=alpha))
 
     def forward(self, x):
         for layer in self.layers:
